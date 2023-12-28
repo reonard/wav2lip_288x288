@@ -165,13 +165,13 @@ class Dataset(object):
 
     def __getitem__(self, idx):
         while 1:
+            print("geting idx %d" % idx)
             idx = random.randint(0, len(self.all_videos) - 1)
             is_silence = random.random() > 0.5
             is_flip = random.random() > 0.7
             vidname = self.all_videos[idx]
             img_names = list(glob(join(vidname, '*.jpg')))
             if len(img_names) <= 3 * syncnet_T:
-                # print("Len", vidname)
                 continue
             img_name = random.choice(img_names)
             id_img_name = self.get_frame_id(img_name)
@@ -307,7 +307,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
             stop_training = False
             # print('Starting Epoch: {}'.format(global_epoch))
 
-            running_sync_loss, running_l1_loss, running_perceptual_loss = 0., 0., 0., 0.
+            running_sync_loss, running_l1_loss, running_perceptual_loss = 0., 0., 0.
             running_disc_real_loss, running_disc_fake_loss = 0., 0.
             running_vgg_loss= 0.
             st = time.time()
