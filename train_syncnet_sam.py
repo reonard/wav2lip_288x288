@@ -32,8 +32,15 @@ parser.add_argument('--checkpoint_dir', help='Save checkpoints to this directory
 parser.add_argument('--exp_num', help='ID number of the experiment', required=False, default="actor", type=str)
 parser.add_argument('--history_train', help='Save history training', required=False,default="logs/syncnet/",type=str)
 parser.add_argument('--checkpoint_path', help='Resumed from this checkpoint', default=None, type=str)
+parser.add_argument('--dataset_dir', help='Dir for data set e.g. /gemini/data-2', required=True, default=None, type=str)
+parser.add_argument('--syncwav_dir', help='Dir for synced.wav e.g. /gemini/code', required=True, default=None, type=str)
+
 args = parser.parse_args()
 
+dataset_dir = args.dataset_dir
+syncwav_dir = args.syncwav_dir
+
+print(">>>> dataset dir: {} >>>> syncwav_dir: {}".format(dataset_dir, syncwav_dir))
 
 global_step = 0
 global_epoch = 0
@@ -80,7 +87,7 @@ class Dataset(object):
         vidname = dirname(start_frame)
         window_fnames = []
         for frame_id in range(start_id, start_id + syncnet_T):
-            frame = join(vidname, f'{frame_id:05}.jpg')
+            frame = join(vidname, f'{frame_id}.jpg')
             if not isfile(frame):
                 return None
             window_fnames.append(frame)
@@ -156,12 +163,21 @@ class Dataset(object):
 
 
             try:
-                mel_out_path = join(vidname, "mel.npy")
+                full_out_path = vidname.replace(dataset_dir, syncwav_dir)
+                mel_out_path = join(full_out_path, "mel.npy")
                 if os.path.isfile(mel_out_path):  # x50 times faster - 0.002 -> 0.01s
                     with open(mel_out_path, "rb") as f:
                         orig_mel = np.load(f)
                 else:
-                    wavpath = os.path.join(vidname, "synced.wav")
+                    wavpath = os.path.join(full_out_path, "synced.wav")
+                    if not os.path.exists(full_out_path):
+                        os.makedirs(full_out_path)
+                        
+                    if not os.path.isfile(wavpath):
+                        au_names = list(glob(join(vidname, '*.wav')))
+                        au_path = au_names[0]
+                        status = os.system(f"ffmpeg -i {au_path} -ar 16000 {wavpath}")    
+
                     wav = audio.load_wav(wavpath, hparams.sample_rate)
 
                     orig_mel = audio.melspectrogram(wav).T  # 0.2 -> 0.9s
